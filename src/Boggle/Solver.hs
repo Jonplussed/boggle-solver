@@ -5,15 +5,26 @@ module Boggle.Solver where
 import Data.Bool (bool)
 import Data.Monoid ((<>))
 
-import Data.Vector
+import qualified Data.Set as S
+import qualified Data.Text as T
+import qualified Data.Vector as V
 
-data Tree a
-  = Branch a [Tree a]
-  | Leaf a
-  deriving (Eq, Show)
+type Board = V.Vector Char
+type Used = Set Int
+type Results = Set T.Text
 
-neighbors :: Int -> Int -> [Int]
-neighbors nxn at = top <> bottom <> left <> right
+data Tree a = Branch a [Tree a] | Leaf a deriving (Eq, Show)
+data State = State Int Used Results deriving (Eq, Show)
+
+exampleBoard3x3 :: Board
+exampleBoard3x3 =
+  ['c','a','t'
+  ,'r','a','t'
+  ,'s','b','n'
+  ]
+
+nxnNeighbors :: Int -> Int -> [Int]
+nxnNeighbors nxn at = top <> bottom <> left <> right
   where
     unless x = bool [x] []
 
@@ -27,9 +38,5 @@ neighbors nxn at = top <> bottom <> left <> right
     left = (pred at) `unless` atLeft
     right = (succ at) `unless` atRight
 
-exampleBoard3x3 :: Vector Char
-exampleBoard3x3 =
-  ['c','a','t'
-  ,'r','a','t'
-  ,'s','b','n'
-  ]
+solve :: Int -> Board -> Results
+solve nxn board = go $ State 0 [] []

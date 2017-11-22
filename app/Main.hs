@@ -1,8 +1,17 @@
 {-# LANGUAGE OverloadedLists, OverloadedStrings #-}
 
-module Main (main) where
+module Main where
 
-import Boggle.Solver (solve) where
+import Boggle.Solver (solve)
+import Data.Set (Set)
+import Data.Text (Text)
+import Data.Vector (Vector)
+
+board2x2 :: Vector Char
+board2x2 =
+  ['c','a'
+  ,'z','t'
+  ]
 
 board3x3 :: Vector Char
 board3x3 =
@@ -27,4 +36,4 @@ dictionary =
   ]
 
 main :: IO ()
-main = puts . show $ solve 3 board3x3 dictionary
+main = putStr . show $ solve 3 board3x3 dictionary

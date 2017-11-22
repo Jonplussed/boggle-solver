@@ -4,22 +4,48 @@ module Boggle.Solver where
 
 import Data.Bool (bool)
 import Data.Monoid ((<>))
+import Data.Set ((\\))
+import Data.Vector ((!))
 
+import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Vector as V
 
+type Board = V.Vector Char
+type Dictionary = S.Set T.Text
+type Results = S.Set T.Text
+
 data State = State
-  { index :: Int
-  , used :: Set Int
-  , acc :: Text
-  , results :: Set T.Text
+  { used :: S.Set Int
+  , word :: T.Text
+  , found :: [T.Text]
   } deriving (Eq, Show)
 
-type Board = V.Vector Char
-type Dictionary = Set T.Text
+-- Crappy first iteration. This could be redone with foldl', no conversions
+-- between list/set, in parallel, and possibly stack-safely.
+solve :: Int -> Board -> Dictionary -> Results
+solve nxn board dict =
+    S.fromList . concatMap (go emptyState) . S.toList $ nxnCells nxn
+  where
+    go :: State -> Int -> [T.Text]
+    go state index
+        | L.null neighbors = found'
+        | otherwise = concatMap (go state') neighbors
+      where
+        neighbors = S.toList $ nxnNeighbors nxn index \\ used'
 
-nxnNeighbors :: Int -> Int -> [Int]
+        used' = S.insert index $ used state
+        word' = T.snoc (word state) (board ! index)
+        found' = bool (found state) (word' : found state) (S.member word' dict)
+        state' = State used' word' found'
+
+-- internal functions
+
+nxnCells :: Int -> S.Set Int
+nxnCells nxn = [0 .. pred (nxn * nxn)]
+
+nxnNeighbors :: Int -> Int -> S.Set Int
 nxnNeighbors nxn at = top <> bottom <> left <> right
   where
     unless x = bool [x] []
@@ -34,17 +60,10 @@ nxnNeighbors nxn at = top <> bottom <> left <> right
     left = (pred at) `unless` atLeft
     right = (succ at) `unless` atRight
 
-solve :: Int -> Board -> Dictionary -> Results
-solve nxn board dict = results . go $ State 0 mempty mempty mempty
-  where
-    go st | isFinished st = st
-
-    go st 
-      where
-        index' =
-        used' = S.insert (index st) (used st)
-        acc' = T.snoc (acc st) (board ! index st)
-        results' = bool results (S.insert acc' results) (S.member acc' dict)
-
-    neighbors = nxnNeighbors nxn
-    isFinished st = succ index == nxn * nxn
+emptyState :: State
+emptyState =
+  State
+    { used = mempty
+    , word = mempty
+    , found = mempty
+    }

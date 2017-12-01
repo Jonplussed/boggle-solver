@@ -7,6 +7,7 @@ import Data.Monoid ((<>))
 import Data.Set ((\\))
 import Data.Vector ((!))
 
+import qualified Data.Foldable as F
 import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -19,25 +20,25 @@ type Results = S.Set T.Text
 data State = State
   { used :: S.Set Int
   , word :: T.Text
-  , found :: [T.Text]
+  , found :: Results
   } deriving (Eq, Show)
 
 -- Crappy first iteration. This could be redone with foldl', no conversions
 -- between list/set, in parallel, and possibly stack-safely.
 solve :: Int -> Board -> Dictionary -> Results
 solve nxn board dict =
-    S.fromList . concatMap (go emptyState) . S.toList $ nxnCells nxn
+    sFoldMap (go emptyState) . S.toList $ nxnCells nxn
   where
-    go :: State -> Int -> [T.Text]
+    go :: State -> Int -> Results
     go state index
         | L.null neighbors = found'
-        | otherwise = concatMap (go state') neighbors
+        | otherwise = sFoldMap (go state') neighbors
       where
         neighbors = S.toList $ nxnNeighbors nxn index \\ used'
 
         used' = S.insert index $ used state
         word' = T.snoc (word state) (board ! index)
-        found' = bool (found state) (word' : found state) (S.member word' dict)
+        found' = bool (found state) (S.insert word' $ found state) (S.member word' dict)
         state' = State used' word' found'
 
 -- internal functions
@@ -67,3 +68,7 @@ emptyState =
     , word = mempty
     , found = mempty
     }
+
+-- Because a Set is spine-strict, we prefer our own strict version of "foldMap"
+sFoldMap :: (Foldable t, Monoid m) => (a -> m) -> t a -> m
+sFoldMap f = F.foldl' (\acc x -> (f x) <> acc) mempty
